@@ -1,0 +1,312 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/processing.js/1.6.0/processing.min.js">
+</script>
+<script type='application/processing' target='processing'>
+  // set up screen
+  const SCREENSIZE = 1000;
+  const SCREEN_HT = (3/4)*SCREENSIZE;
+  size( SCREENSIZE, SCREEN_HT );
+  //set some numbers for the game environment
+  const SPEED = 5; //ball speed
+  const BALL_D = 30; //ball diameter
+  const MAX_LIVES = 1000; //num of lives until game is over
+  const BR_WIDTH = 100; //width of bricks
+  const BR_HEIGHT = 30; //ht of bricks
+  const BR_SP = 5; //spacing between bricks
+  const NUM_ROWS = 10; //num rows of bricks
+  const BG_COLOR = [0]; //background color
+  const PADDLE_HT = 20; //ht of paddle
+  const PADDLE_W = 150; //width of paddle
+  const P_SPEED = 10; //paddle speed
+
+  //class for making a single brick
+  function Brick(xIn,yIn) {
+    this.drawMe = true;
+    this.x = xIn;
+    this.y = yIn;
+    this.w = BR_WIDTH;
+    this.h = BR_HEIGHT;
+    this.color = [3, 140, 252]; //blue bricks
+    /******************************************************************
+    /*  STUDENT: Write the code for the class method drawBrick()
+    /*           Note:  place 2 lines of code inside the If-Statement
+    ******************************************************************/
+    this.drawBrick = function() {
+      if(this.drawMe == true) {
+        fill(this.color[0],this.color[1],this.color[2]);
+        rect(this.x, this.y, this.w, this.h);
+
+      }
+    };// method drawBrick()
+  }// end of Class Brick
+
+  //class for making a single ball
+  function Ball(AIn,BIn) {
+    this.d = BALL_D;
+    // start the ball at the bottom-middle of the screen
+    this.x = AIn; 
+    this.y = BIn;
+    this.color = [255,0,0];
+    // ball will start traveling up to the right at 45 degrees
+    this.xSpeed = SPEED;
+    this.ySpeed = -SPEED;
+    /*************************************************************
+    /*  STUDENT: Write the code for the class method drawBall()
+    *************************************************************/
+    this.drawBall = function() {
+      fill(this.color[0],this.color[1],this.color[2]);
+      ellipse(this.x, this.y, this.d, this.d);
+    };// method drawBall()
+  }// end of Class Ball
+
+
+
+
+
+  //the game-object will contain all the variables for the game environment
+  function Game() {
+    this.score = 0;
+    this.lives = MAX_LIVES;
+    this.gameOver = false;
+    this.showLives = function() {
+      textSize(15);
+      fill(121, 186, 153);
+      text("No. Lives:  " + this.lives, 10, 15);
+    }; //method showLives()
+    this.showScore = function() {
+      textSize(15);
+      fill(121, 186, 153);
+      text("Score:  " + this.score, SCREENSIZE - 100, 15);
+    }; //method showScore()
+    this.showWinner = function() {
+      textSize(50);
+      if(this.lives > 0){
+        fill(21, 99, 59);
+        text("You Win!!!", SCREENSIZE/2 - 120, SCREEN_HT/2);
+      }else {
+        fill(235, 52, 89);
+        text("Sorry...You Lost!!!", SCREENSIZE/2 - 160, SCREEN_HT/2);
+      }
+    }; //method showWinner()mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
+  }// Class Game
+
+  // the board-object contains all the details of the game-board
+  function Board() {
+    this.numCols = Math.floor( SCREENSIZE/(BR_WIDTH + BR_SP) );
+    this.marginLeft = (SCREENSIZE - this.numCols*(BR_WIDTH+BR_SP) + BR_SP)/2;
+    this.marginTop = this.marginLeft + 10;
+    this.bricks = [];
+    // this method will be used to create the bricks one time per game
+    this.createBricks = function() {
+      for(var row = 0; row < NUM_ROWS; row++){
+        for(var col = 0; col < this.numCols; col++){
+          this.bricks.push( new Brick( this.marginLeft + col*(BR_WIDTH + BR_SP), this.marginTop + row*(BR_HEIGHT + BR_SP) ) );
+        }// for
+      }// for
+    };// method createBricks
+    this.createBricks();
+    // this method re-draws all the bricks for each screen-refresh cycle
+    this.drawBricks = function() {
+      for(var row = 0; row < NUM_ROWS; row++){
+        for(var col = 0; col < this.numCols; col++){
+          this.bricks[row*this.numCols + col].drawBrick();
+        }// for
+      }// for
+    };// method drawBricks
+  }// class Board
+
+
+  //Class for making the paddle-object
+  function Paddle(){
+    this.h = PADDLE_HT;
+    this.w = PADDLE_W;
+    //place the paddle at the bottom-middle of the screen
+    this.x = (SCREENSIZE-this.w)/2;
+    this.y = SCREEN_HT - this.h;
+    this.color = [89,71,115];
+    /*************************************************************
+    /*  STUDENT: Write the code for the class method drawPaddle()
+    *************************************************************/
+    this.paddleDraw = function() {
+      fill(this.color[0],this.color[1],this.color[2]);
+      rect(this.x,this.y,this.w,this.h);
+
+
+    }; // method paddleDraw()
+  }// Class Paddle()
+
+
+  //This is NOT a class.  This function handles all the collisions.
+  function checkCollision(b) {
+    //check collision with walls
+    if(b.x > SCREENSIZE - b.d/2 || b.x < b.d/2){
+      b.color = [random(255),random(255),random(255)];
+      b.xSpeed = -b.xSpeed;
+    }
+    //check collision with paddle
+    if(b.y > paddle.y - b.d/2){
+      if(b.x > paddle.x && b.x < paddle.x + paddle.w) {
+        b.color = [random(255),random(255),random(255)];
+        paddle.color = [random(255),random(255),random(255)];
+        b.ySpeed = -b.ySpeed;
+      }
+    }
+    //check collision with ceiling
+    if(b.y < b.d/2) {
+      b.color = [random(255),random(255),random(255)];
+      b.ySpeed = -b.ySpeed;
+    }
+    //check all the bricks to see if there is collision
+    for(var i = 0; i < board.bricks.length; i++) {
+      var brX = board.bricks[i].x;
+      var brY = board.bricks[i].y;
+      var brW = board.bricks[i].w;
+      var brH = board.bricks[i].h;
+      if(board.bricks[i].drawMe){
+        if(b.x > brX && b.x < brX + brW && b.y > brY && b.y < brY + brH){
+          board.bricks[i].drawMe = false;
+          b.color = [random(255),random(255),random(255)];
+          var tempColor = [random(255),random(255),random(255)];
+          for(var p = 0; p < board.bricks.length; p++){
+            board.bricks[p].color = tempColor;
+          }
+          b.ySpeed = -b.ySpeed;
+          game.score++;
+
+
+
+          if(game.score >= board.numCols * NUM_ROWS){
+            game.gameOver = true;
+          }
+        }
+      }
+    }
+    //if the ball hits the floor, there are lot's of things to do
+    if( b.y > paddle.y){
+      b.color = [random(255),random(255),random(255)];
+      //stop the ball's movement
+      b.xSpeed = 0;
+      b.ySpeed = 0;
+      //re-position the ball to the original starting position
+      b.x = SCREENSIZE/2; 
+      b.y = SCREEN_HT - 1.5*b.d;
+      //if the game is not over, we need to restart the ball's movement
+      if( !game.gameOver ) {
+        //restart the ball's movement
+        b.xSpeed = SPEED;
+        b.ySpeed = -SPEED;
+        //reduce the number of lives
+        game.lives--;
+        //if the number of lives is depleted, then we should end the game
+        if( game.lives <= 0 ) {
+          game.gameOver = true;
+        }
+      }
+    }// if(ball.y > paddle.y)
+  }// function checkCollision()
+
+  /********************************************************************************
+  /*  STUDENT:  Create an object named "game" that instantiates the class Game()
+  /*            The game object will contain all the game environment variables
+  ********************************************************************************/
+  var game = new Game();
+
+  /********************************************************************************
+  /*  STUDENT:  Create an object named "board" that instantiates the class Board()
+  /*            The board object will contain all the board variables
+  ********************************************************************************/
+
+  var board = new Board();
+
+  /********************************************************************************
+  /*  STUDENT:  Create an object named "ball" that instantiates the class Ball()
+  ********************************************************************************/
+
+  var ball = new Ball(SCREENSIZE/2,550);
+
+  var ball2 = new Ball(SCREENSIZE/2+100,550);
+  /***********************************************************************************
+  /*  STUDENT:  Create an object named "paddle" that instantiates the class Paddle()
+  ***********************************************************************************/
+
+  var paddle = new Paddle();
+
+
+  /************* Here is our "game engine" **************/
+  //This draw() function gets called 60 times per second
+  void draw() {
+
+    //redraw background each cycle
+    background(BG_COLOR[0],BG_COLOR[1],BG_COLOR[2]);
+    //check for all collisions (walls, paddle, bricks)
+    checkCollision(ball);
+    checkCollision(ball2);
+    /********************************************************************************
+    /*  STUDENT:  Use the board-object to call the drawBricks() method
+    ********************************************************************************/
+    board.drawBricks();
+
+
+    /********************************************************************************
+    /*  STUDENT:  Use the game-object to call the showLives() method
+    ********************************************************************************/
+
+
+    game.showLives();
+    /********************************************************************************
+    /*  STUDENT:  Use the game-object to call the showScore() method
+    ********************************************************************************/
+
+    game.showScore();
+
+
+    //if the game is not over, will we move the paddle and ball
+    if(!game.gameOver) {
+      //check if the arrow keys are pressed, move the paddle
+      if(keyPressed) {
+        if(keyCode == RIGHT){
+          if(paddle.x < SCREENSIZE-paddle.w){
+            paddle.x = paddle.x + P_SPEED;
+          }
+        } else if(keyCode == LEFT) {
+          if(paddle.x > 0){
+            paddle.x = paddle.x - P_SPEED;
+          }  
+        }
+      }
+
+
+
+
+
+      /********************************************************************************
+    /*  STUDENT:  Use the paddle-object to call the paddleDraw() method
+    ********************************************************************************/
+      paddle.paddleDraw();
+
+
+      /********************************************************************************
+    /*  STUDENT:  Using the ball-object's x, y, xSpeed, and ySpeed properties, 
+    /*            update the ball's position.
+    ********************************************************************************/
+      ball.x = ball.x + ball.xSpeed;
+      ball.y = ball.y + ball.ySpeed;  
+
+      ball2.x = ball2.x + ball2.xSpeed;
+      ball2.y = ball2.y + ball2.ySpeed;  
+      /********************************************************************************
+    /*  STUDENT:  Use the ball-object to call the drawBall() method
+    ********************************************************************************/
+
+      ball.drawBall();
+      ball2.drawBall();
+
+
+    } else {//else, the game is over...time to the winner
+      game.showWinner();
+    }// if-else
+
+  }// end of draw()
+
+
+</script>
+<canvas id='processing'></canvas>
